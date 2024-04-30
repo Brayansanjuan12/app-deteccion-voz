@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detección de voz</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #91edc2; 
+        }
+        header {
+            background-color: #64b1ab; 
+            padding: 15px 0;
+        }
+        table {
+            width: 80%;
+            margin: auto;
+            border-collapse: collapse;
+            background-color: #cae0d8;
+        }
+        th, td {
+            border: 2px solid #333;
+            padding: 15px;
+            text-align: center;
+        }
+        th {
+            background-color: #64b1ab;
+            color: black;
+        }
+        .footer-top {
+            background-color: #f4f6f6; 
+            padding: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="#">Interacción Humano Computadora</a>
+        </nav>
+    </header>
+<br>
+    <div style="text-align: center;">
+        <h2>
+            <strong>Control De Dispositivos En Casa</strong>
+        </h2>
+        <br>
+            <strong>Para interactuar conmigo debes mencionar mi nombre "BRIAN"</strong>
+    </div>
+<br>
+<table>
+    <thead>
+        <tr>
+            <th>Dispositivo</th>
+            <th>Objetos</th>
+            <th>Estado</th>
+            <th>Función</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Luz de la recámara</td>
+            <td>1 Foco</td>
+            <td id="recamara">Enciende/Apaga</td>
+            <td>
+                <li>Brian enciende el foco de la recamara</li>
+                <li>Brian apaga el foco de la recamara</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Luz de la sala</td>
+            <td>1 Foco</td>
+            <td id="sala">Enciende/Apaga</td>
+            <td>
+                <li>Brian enciende el foco de la sala</li>
+                <li>Brian apaga el foco de la sala</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Luces del jardín</td>
+            <td>5 Focos</td>
+            <td id="jardin">Enciende/Apaga</td>
+            <td>
+                <li>Brian enciende los focos del jardin</li>
+                <li>Brian apaga los focos del jardin</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Ventilador de techo</td>
+            <td>1 Ventilador</td>
+            <td id="ventilador">Enciende/Apaga</td>
+            <td>
+                <li>Brian enciende el ventilador</li>
+                <li>Brian apaga el ventilador</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Cortinas</td>
+            <td>3 Cortinas</td>
+            <td id="cortinas">Abre/Cierra</td>
+            <td>
+                <li>Brian abre las cortinas</li>
+                <li>Brian cierra las cortinas</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Alarma de la casa</td>
+            <td>1 Alarma (Chicharra)</td>
+            <td id="alarma">Activa/Desactiva</td>
+            <td>
+                <li>Brian activa la alarma de la casa</li>
+                <li>Brian apaga la alarma de la casa</li>
+            </td>
+        </tr>
+        <tr>
+            <td>Cámaras de seguridad</td>
+            <td>3 Cámaras</td>
+            <td id="camaras">Enciende/Apaga</td>
+            <td>
+                <li>Brian activa las camaras de seguridad</li>
+                <li>Brian apaga las camaras de seguridad</li>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+<br>
+
+    <!-- Scripts al final del body -->
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let audio;
+    let audioEnabled = false;
+
+    function enviarOrdenAMockAPI(orden, usuario, fechaHora) {
+        const url = `https://662c6b2f0547cdcde9de4777.mockapi.io/Voz`;
+        const otraUrl = 'https://url-del-otro-sitio.com'; // Reemplaza esto con la URL del otro sitio al que deseas acceder
+
+        const data = {
+            "Orden": orden,
+            "Usuario": usuario,
+            "Fecha-Hora": fechaHora
+        };
+
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': otraUrl // Especifica la URL del otro sitio aquí
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Error al enviar orden al MOCKAPI');
+            }
+        })
+        .catch(error => {
+            console.error('Error al enviar orden al MOCKAPI:', error);
+            throw error;
+        });
+    }
+
+    function obtenerFechaHoraActual() {
+        const ahora = new Date();
+        const options = { timeZone: 'America/Mexico_City' };
+        const formatter = new Intl.DateTimeFormat('es-MX', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: options.timeZone
+        });
+        const fechaHora = formatter.format(ahora);
+        return fechaHora.replace(/\//g, '-').replace(',', '');
+    }
+
+    function actualizarUltimaOrden(mensaje) {
+        document.getElementById('inputUltimaOrden').value = mensaje;
+    }
+
+    function initializeRecognition() {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = true;
+
+        recognition.addEventListener("result", (e) => {
+            const text = Array.from(e.results)
+                .map((result) => result[0])
+                .map((result) => result.transcript)
+                .join("");
+
+            if (e.results[0].isFinal) {
+                if (text.includes("enciende el foco de la sala")) {
+                    const sala = document.getElementById('sala').querySelector('img');
+                    sala.src = 'img/foc1-on.png';
+                    console.log("Comando 'enciende el foco de la sala' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Encender foco de la sala", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian enciende el foco de la sala");
+                } else if (text.includes("apaga el foco de la sala")) {
+                    const sala = document.getElementById('sala').querySelector('img');
+                    sala.src = 'img/foc1.png';
+                    console.log("Comando 'apaga el foco de la sala' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Apagar foco de la sala", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian apaga el foco de la sala");
+                } else if (text.includes("apaga el foco de la recámara")) {
+                    const recamara = document.getElementById('recamara').querySelector('img');
+                    recamara.src = 'img/foc7.png';
+                    console.log("Comando 'apaga el foco de la recámara' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Apagar foco de la recámara", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian apaga el foco de la recámara");
+                } else if (text.includes("enciende el foco de la recámara")) {
+                    const recamara = document.getElementById('recamara').querySelector('img');
+                    recamara.src = 'img/foc7-on.png';
+                    console.log("Comando 'enciende el foco de la recámara' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Encender foco de la recámara", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian enciende el foco de la recámara");
+                } else if (text.includes("enciende los focos del jardín")) {
+                    const focosJardin = document.querySelectorAll('#jardin img');
+                    focosJardin.forEach(foco => {
+                        foco.src = 'img/focjar-on.png';
+                    });
+                    console.log("Comando 'enciende los focos del jardín' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Encender focos del jardín", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian enciende los focos del jardín");
+                } else if (text.includes("apaga los focos del jardín")) {
+                    const focosJardin = document.querySelectorAll('#jardin img');
+                    focosJardin.forEach(foco => {
+                        foco.src = 'img/foc5.png';
+                    });
+                    console.log("Comando 'apaga los focos del jardín' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Apagar focos del jardín", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian apaga los focos del jardín");
+                } else if (text.includes("abre las cortinas")) {
+                    const cortinas = document.querySelectorAll('.card[id="corinas"] img');
+                    cortinas.forEach(cortina => {
+                        cortina.src = 'img/curtains1.png';
+                    });
+                    console.log("Comando 'abre las cortinas' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Abrir cortinas", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian abre las cortinas");
+                } else if (text.includes("cierra las cortinas")) {
+                    const cortinas = document.querySelectorAll('.card[id="corinas"] img');
+                    cortinas.forEach(cortina => {
+                        cortina.src = 'img/curtains.png';
+                    });
+                    console.log("Comando 'cierra las cortinas' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Cerrar cortinas", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian cierra las cortinas");
+                } else if (text.includes("enciende las cámaras de seguridad")) {
+                    const camarasSeguridad = document.querySelectorAll('.card[id="camara"] img');
+                    camarasSeguridad.forEach(camara => {
+                        camara.src = 'img/camara33.png';
+                    });
+                    console.log("Comando 'enciende las cámaras de seguridad' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Encender cámaras de seguridad", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian enciende las cámaras de seguridad");
+                } else if (text.includes("apaga las cámaras de seguridad")) {
+                    const camarasSeguridad = document.querySelectorAll('.card[id="camara"] img');
+                    camarasSeguridad.forEach(camara => {
+                        camara.src = 'img/camara34.png';
+                    });
+                    console.log("Comando 'apaga las cámaras de seguridad' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Apagar cámaras de seguridad", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian apaga las cámaras de seguridad");
+                } else if (text.includes("activa la alarma de la casa")) {
+                    const alarma = document.getElementById('alarma').querySelector('img');
+                    alarma.src = 'img/alarm.png';
+                    console.log("Comando 'activa la alarma de la casa' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Activar alarma de la casa", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian activa la alarma de la casa");
+                    audio = new Audio('alarma.mp3');
+                    audio.play();
+                } else if (text.includes("apaga la alarma de la casa")) {
+                    const alarma = document.getElementById('alarma').querySelector('img');
+                    alarma.src = 'img/alarm1.png';
+                    console.log("Comando 'apaga la alarma de la casa' ejecutado correctamente.");
+                    enviarOrdenAMockAPI("Apagar alarma de la casa", "Brayan", obtenerFechaHoraActual());
+                    actualizarUltimaOrden("Brian apaga la alarma de la casa");
+                    if (audio) {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }
+                } else if (text.includes("enciende el ventilador")) {
+                    const ventilador = document.getElementById('ventilador');
+                    ventilador.querySelector('img').src = 'img/ventilador-on.png';
+                    ventilador.classList.add('encendido');
+                    console.log("Comando 'enciende el ventilador' ejecutado correctamente.");
+                    actualizarUltimaOrden("Brian enciende el ventilador");
+                } else if (text.includes("apaga el ventilador")) {
+                    const ventilador = document.getElementById('ventilador');
+                    ventilador.querySelector('img').src = 'img/ventilador-off.png';
+                    ventilador.classList.remove('encendido');
+                    console.log("Comando 'apaga el ventilador' ejecutado correctamente.");
+                    actualizarUltimaOrden("Brian apaga el ventilador");
+                }
+            }
+        });
+    }
+
+    function startRecognition() {
+        if (!recognition) {
+            initializeRecognition();
+        }
+        recognition.start();
+    }
+
+    function stopRecognition() {
+        if (recognition) {
+            recognition.stop();
+        }
+    }
+
+    document.body.addEventListener("click", () => {
+        audioEnabled = true;
+        startRecognition();
+    });
+
+    startRecognition();
+});
+
+    </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container text-center">
+            <div class="footer-top">
+                <span class="text-muted">Derechos Reservados © 2024</span>
+            </div>
+            <div>
+                <span class="text-muted">Brayan Pérez San Juan</span>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
