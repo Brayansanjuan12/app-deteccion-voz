@@ -1,1 +1,1 @@
-<img src="cap.jpeg" alt="">
+<img src="capt.jpeg" alt="">
